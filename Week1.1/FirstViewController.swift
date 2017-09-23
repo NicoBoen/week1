@@ -19,6 +19,9 @@ class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDat
     //var temp: [Todoes] = []
     var temp = List<Todoes>()
     var realm: Realm!
+    var notificationToken: NotificationToken!
+    let username = "qwe"
+    let password = "qwe"
       
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -33,6 +36,36 @@ class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDat
         if self.temp.realm == nil, lists.count > 0{
             for list in lists{
                 self.temp.append(list)
+            }
+        }
+        
+        SyncUser.logIn(with: .usernamePassword(username: username, password: password, register: false), server: URL(string: "http://172.17.1.1:9080")!){
+            user, error in
+            guard let user = user else{
+                fatalError(String(describing: error))
+            }
+            
+            DispatchQueue.main.async {
+                //Open Realm
+                let configuration = Realm.Configuration(syncConfiguration: SyncConfiguration(user: user, realmURL: URL(string: "realm://172.17.1.1:9080/~/realmtasks")!)
+                )
+                self.realm = try! Realm(configuration: configuration)
+                
+                //Show Initial Tasks
+                func updateList(){
+                    if self.temp.realm == nil, let list = self.realm.objects(User.self).first{
+                        self.temp = list.todos
+                        self.prepareTable()
+                    }
+                    self.tableView.reloadData()
+                }
+                updateList()
+                
+                //Notify us when Realm changes
+                self.notificationToken = self.realm.addNotificationBlock{_ in
+                updateList()
+                print(self.notificationToken)
+                }
             }
         }
     }
@@ -89,7 +122,12 @@ class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDat
                 let list = self.temp[indexPath.row]
                 self.realm.delete(list)
             }
-            self.temp.remove(at: indexPath.row)
+            //Kodingan minggu 3
+//            self.temp.remove(at: indexPath.row)
+//            tableView.reloadData()
+//            self.prepareTable()
+            
+            //Kodingan minggu 4
             tableView.reloadData()
             self.prepareTable()
         }
@@ -111,13 +149,24 @@ class FirstViewController: UIViewController, UITableViewDelegate, UITableViewDat
     
     func updateData(todoe: Todoes){
         //temp.append(todoe)
-        let realm = try! Realm()
         
-        try! realm.write {
+        //Kodingan minggu 3
+//        let realm = try! Realm()
+//        
+//        try! realm.write {
+//            temp.insert(todoe, at: temp.count)
+//            realm.add(todoe)
+//        }
+//        tableView.reloadData()
+        
+        //Kodingan minggu 4
+        try! temp.realm?.write {
             temp.insert(todoe, at: temp.count)
-            realm.add(todoe)
         }
-        tableView.reloadData()
+    }
+    
+    deinit {
+        notificationToken.stop()
     }
 }
 
